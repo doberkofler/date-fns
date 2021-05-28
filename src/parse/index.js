@@ -7,7 +7,7 @@ import getTimezoneOffsetInMilliseconds from '../_lib/getTimezoneOffsetInMillisec
 import {
   isProtectedDayOfYearToken,
   isProtectedWeekYearToken,
-  throwProtectedError
+  throwProtectedError,
 } from '../_lib/protectedTokens/index'
 import toInteger from '../_lib/toInteger/index'
 import parsers from './_lib/parsers/index'
@@ -325,6 +325,7 @@ var unescapedLatinCharacterRegExp = /[a-zA-Z]/
  * @param {String} formatString - the string of tokens
  * @param {Date|Number} referenceDate - defines values missing from the parsed dateString
  * @param {Object} [options] - an object with options.
+ * @param {boolean} [options.strict=false] - the strict flag.
  * @param {Locale} [options.locale=defaultLocale] - the locale object. See [Locale]{@link https://date-fns.org/docs/Locale}
  * @param {0|1|2|3|4|5|6} [options.weekStartsOn=0] - the index of the first day of the week (0 - Sunday)
  * @param {1|2|3|4|5|6|7} [options.firstWeekContainsDate=1] - the day of January, which is always in the first week of the year
@@ -367,7 +368,7 @@ export default function parse(
   var dateString = String(dirtyDateString)
   var formatString = String(dirtyFormatString)
   var options = dirtyOptions || {}
-
+  var strict = typeof options.strict === 'boolean' ? options.strict : false
   var locale = options.locale || defaultLocale
 
   if (!locale.match) {
@@ -414,9 +415,10 @@ export default function parse(
   }
 
   var subFnOptions = {
+    strict: strict,
     firstWeekContainsDate: firstWeekContainsDate,
     weekStartsOn: weekStartsOn,
-    locale: locale
+    locale: locale,
   }
 
   // If timezone isn't specified, it will be set to the system timezone
@@ -425,15 +427,15 @@ export default function parse(
       priority: TIMEZONE_UNIT_PRIORITY,
       subPriority: -1,
       set: dateToSystemTimezone,
-      index: 0
-    }
+      index: 0,
+    },
   ]
 
   var i
 
   var tokens = formatString
     .match(longFormattingTokensRegExp)
-    .map(function(substring) {
+    .map(function (substring) {
       var firstCharacter = substring[0]
       if (firstCharacter === 'p' || firstCharacter === 'P') {
         var longFormatter = longFormatters[firstCharacter]
@@ -508,7 +510,7 @@ export default function parse(
         set: parser.set,
         validate: parser.validate,
         value: parseResult.value,
-        index: setters.length
+        index: setters.length,
       })
 
       dateString = parseResult.rest
@@ -543,25 +545,25 @@ export default function parse(
   }
 
   var uniquePrioritySetters = setters
-    .map(function(setter) {
+    .map(function (setter) {
       return setter.priority
     })
-    .sort(function(a, b) {
+    .sort(function (a, b) {
       return b - a
     })
-    .filter(function(priority, index, array) {
+    .filter(function (priority, index, array) {
       return array.indexOf(priority) === index
     })
-    .map(function(priority) {
+    .map(function (priority) {
       return setters
-        .filter(function(setter) {
+        .filter(function (setter) {
           return setter.priority === priority
         })
-        .sort(function(a, b) {
+        .sort(function (a, b) {
           return b.subPriority - a.subPriority
         })
     })
-    .map(function(setterArray) {
+    .map(function (setterArray) {
       return setterArray[0]
     })
 
